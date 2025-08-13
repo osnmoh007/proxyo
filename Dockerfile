@@ -16,6 +16,7 @@ RUN apt-get update && apt-get install -y \
     apache2-utils \
     openssh-server \
     sudo \
+    openssl \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy the installation script
@@ -87,9 +88,12 @@ chmod 644 /etc/squid/passwd\n\
 echo "Creating proxy user: $SQUID_USERNAME"\n\
 /usr/bin/htpasswd -b -c /etc/squid/passwd $SQUID_USERNAME $SQUID_PASSWORD\n\
 \n\
-# Set SSH password for the user\n\
-echo "$SQUID_USERNAME:$SQUID_PASSWORD" | chpasswd\n\
-echo "Set SSH password for user: $SQUID_USERNAME"\n\
+# Set SSH password for the user (bypassing PAM issues)\n\
+echo "Setting SSH password for user: $SQUID_USERNAME"\n\
+# Use openssl to generate password hash and update /etc/shadow directly\n\
+PASS_HASH=$(openssl passwd -1 "$SQUID_PASSWORD")\n\
+sed -i "s|^$SQUID_USERNAME:[^:]*|$SQUID_USERNAME:$PASS_HASH|" /etc/shadow\n\
+echo "SSH password set successfully for user: $SQUID_USERNAME"\n\
 \n\
 # Start SSH server in background\n\
 echo "Starting SSH server on port $SSH_PORT"\n\
