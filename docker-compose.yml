@@ -1,0 +1,20 @@
+version: '3.8'
+
+services:
+  squid-proxy:
+    build: .
+    container_name: squid-proxy
+    ports:
+      - "${SQUID_PORT:-3128}:3128"
+    environment:
+      - SQUID_USERNAME=${SQUID_USERNAME:-proxyuser}
+      - SQUID_PASSWORD=${SQUID_PASSWORD:-proxypass}
+      - SQUID_PORT=${SQUID_PORT:-3128}
+    volumes:
+      - squid_data:/etc/squid
+    restart: unless-stopped
+    env_file:
+      - .env
+
+volumes:
+  squid_data:
