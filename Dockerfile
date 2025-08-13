@@ -44,10 +44,6 @@ RUN mkdir -p /var/run/sshd && \
     # Disable PAM to avoid issues in container
     sed -i 's/UsePAM yes/UsePAM no/' /etc/ssh/sshd_config
 
-# Create squid user with SSH access
-RUN useradd -m -s /bin/bash $SQUID_USERNAME && \
-    echo "$SQUID_USERNAME ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
-
 # Create a script to add users from environment variables
 RUN echo '#!/bin/bash\n\
 if [ ! -z "$SQUID_USERNAME" ] && [ ! -z "$SQUID_PASSWORD" ]; then\n\
@@ -98,32 +94,15 @@ chmod 644 /etc/squid/passwd\n\
 echo "Creating proxy user: $SQUID_USERNAME"\n\
 /usr/bin/htpasswd -b -c /etc/squid/passwd $SQUID_USERNAME $SQUID_PASSWORD\n\
 \n\
-# Set SSH password for the user using a more reliable method\n\
+# Set SSH password using a simple and reliable method\n\
 echo "Setting SSH password for user: $SQUID_USERNAME"\n\
-# Method 1: Try using passwd command with expect-like behavior\n\
-echo "$SQUID_USERNAME:$SQUID_PASSWORD" | /usr/sbin/chpasswd 2>/dev/null || {\n\
-    echo "chpasswd failed, trying alternative method..."\n\
-    # Method 2: Use openssl to generate hash and update shadow file\n\
-    PASS_HASH=$(openssl passwd -1 "$SQUID_PASSWORD")\n\
-    if [ ! -z "$PASS_HASH" ]; then\n\
-        # Create a temporary shadow file\n\
-        cp /etc/shadow /etc/shadow.backup\n\
-        # Update the password hash in shadow file using sed\n\
-        sed -i "s|^$SQUID_USERNAME:[^:]*|$SQUID_USERNAME:$PASS_HASH|" /etc/shadow\n\
-        chmod 600 /etc/shadow\n\
-        echo "SSH password set using hash method"\n\
-    else\n\
-        echo "Warning: Could not generate password hash"\n\
-    fi\n\
-}\n\
-\n\
-# Verify the password was set correctly\n\
-echo "Verifying SSH password for user: $SQUID_USERNAME"\n\
-if grep -q "^$SQUID_USERNAME:" /etc/shadow; then\n\
-    echo "SSH password verification successful"\n\
-else\n\
-    echo "Warning: SSH password may not be set correctly"\n\
-fi\n\
+# Delete the user if it exists and recreate with password\n\
+userdel -r $SQUID_USERNAME 2>/dev/null || true\n\
+# Create user with password using useradd\n\
+useradd -m -s /bin/bash -p "$(openssl passwd -1 "$SQUID_PASSWORD")" $SQUID_USERNAME\n\
+# Add sudo privileges\n\
+echo "$SQUID_USERNAME ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers\n\
+echo "SSH password set successfully for user: $SQUID_USERNAME"\n\
 \n\
 # Start SSH server in background\n\
 echo "Starting SSH server on port $SSH_PORT"\n\
