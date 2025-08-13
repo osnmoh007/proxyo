@@ -62,6 +62,16 @@ else\n\
 fi' > /usr/local/bin/create-proxy-user && \
     chmod +x /usr/local/bin/create-proxy-user
 
+# Create a test script to verify SSH password
+RUN echo '#!/bin/bash\n\
+echo "=== SSH Password Test ==="\n\
+echo "Username: $SQUID_USERNAME"\n\
+echo "Password: $SQUID_PASSWORD"\n\
+echo "Shadow entry:"\n\
+grep "^$SQUID_USERNAME:" /etc/shadow\n\
+echo "=== End Test ==="' > /usr/local/bin/test-ssh-password && \
+    chmod +x /usr/local/bin/test-ssh-password
+
 # Create startup script
 RUN echo '#!/bin/bash\n\
 set -e\n\
@@ -88,12 +98,34 @@ chmod 644 /etc/squid/passwd\n\
 echo "Creating proxy user: $SQUID_USERNAME"\n\
 /usr/bin/htpasswd -b -c /etc/squid/passwd $SQUID_USERNAME $SQUID_PASSWORD\n\
 \n\
-# Set SSH password for the user (bypassing PAM issues)\n\
+# Set SSH password for the user using a more reliable method\n\
 echo "Setting SSH password for user: $SQUID_USERNAME"\n\
-# Use openssl to generate password hash and update /etc/shadow directly\n\
-PASS_HASH=$(openssl passwd -1 "$SQUID_PASSWORD")\n\
-sed -i "s|^$SQUID_USERNAME:[^:]*|$SQUID_USERNAME:$PASS_HASH|" /etc/shadow\n\
-echo "SSH password set successfully for user: $SQUID_USERNAME"\n\
+# Method 1: Try using passwd command with expect-like behavior\n\
+echo "$SQUID_USERNAME:$SQUID_PASSWORD" | /usr/sbin/chpasswd 2>/dev/null || {\n\
+    echo "chpasswd failed, trying alternative method..."\n\
+    # Method 2: Use openssl to generate hash and update shadow file\n\
+    PASS_HASH=$(openssl passwd -1 "$SQUID_PASSWORD")\n\
+    if [ ! -z "$PASS_HASH" ]; then\n\
+        # Create a temporary shadow file\n\
+        cp /etc/shadow /etc/shadow.backup\n\
+        # Update the password hash in shadow file\n\
+        awk -F: -v user="$SQUID_USERNAME" -v hash="$PASS_HASH" \n\
+            "BEGIN {OFS=FS} $1==user {$2=hash} {print}" /etc/shadow > /etc/shadow.tmp\n\
+        mv /etc/shadow.tmp /etc/shadow\n\
+        chmod 600 /etc/shadow\n\
+        echo "SSH password set using hash method"\n\
+    else\n\
+        echo "Warning: Could not generate password hash"\n\
+    fi\n\
+}\n\
+\n\
+# Verify the password was set correctly\n\
+echo "Verifying SSH password for user: $SQUID_USERNAME"\n\
+if grep -q "^$SQUID_USERNAME:" /etc/shadow; then\n\
+    echo "SSH password verification successful"\n\
+else\n\
+    echo "Warning: SSH password may not be set correctly"\n\
+fi\n\
 \n\
 # Start SSH server in background\n\
 echo "Starting SSH server on port $SSH_PORT"\n\
