@@ -1,14 +1,13 @@
 FROM ubuntu:22.04
 
-# Set build arguments for default values
+# Set build arguments for default values (no sensitive data)
 ARG SQUID_USERNAME=proxyuser
-ARG SQUID_PASSWORD=proxypass
 ARG SQUID_PORT=3128
 
-# Set environment variables
+# Set environment variables (password will be set at runtime)
 ENV SQUID_USERNAME=$SQUID_USERNAME
-ENV SQUID_PASSWORD=$SQUID_PASSWORD
 ENV SQUID_PORT=$SQUID_PORT
+ENV SQUID_PASSWORD=""
 
 # Install required packages
 RUN apt-get update && apt-get install -y \
@@ -38,11 +37,16 @@ fi' > /usr/local/bin/create-proxy-user && \
 RUN echo '#!/bin/bash\n\
 set -e\n\
 \n\
-# Create proxy user from environment variables\n\
-if [ ! -z "$SQUID_USERNAME" ] && [ ! -z "$SQUID_PASSWORD" ]; then\n\
-    echo "Creating proxy user: $SQUID_USERNAME"\n\
-    /usr/bin/htpasswd -b -c /etc/squid/passwd $SQUID_USERNAME $SQUID_PASSWORD\n\
+# Check if required environment variables are set\n\
+if [ -z "$SQUID_USERNAME" ] || [ -z "$SQUID_PASSWORD" ]; then\n\
+    echo "ERROR: SQUID_USERNAME and SQUID_PASSWORD environment variables are required"\n\
+    echo "Example: docker run -e SQUID_USERNAME=myuser -e SQUID_PASSWORD=mypass ..."\n\
+    exit 1\n\
 fi\n\
+\n\
+# Create proxy user from environment variables\n\
+echo "Creating proxy user: $SQUID_USERNAME"\n\
+/usr/bin/htpasswd -b -c /etc/squid/passwd $SQUID_USERNAME $SQUID_PASSWORD\n\
 \n\
 # Start Squid in foreground\n\
 echo "Starting Squid proxy server on port $SQUID_PORT"\n\
