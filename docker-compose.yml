@@ -2,13 +2,14 @@ version: '3.8'
 
 services:
   squid-proxy:
-    build: .
+    image: YOUR_DOCKERHUB_USERNAME/squid-proxy:latest
+    # build: .  # Uncomment this line if you want to build locally instead
     container_name: squid-proxy
     ports:
       - "${SQUID_PORT:-3128}:3128"
     environment:
-      - SQUID_USERNAME=${SQUID_USERNAME:-proxyuser}
-      - SQUID_PASSWORD=${SQUID_PASSWORD:-proxypass}
+      - SQUID_USERNAME=${SQUID_USERNAME}
+      - SQUID_PASSWORD=${SQUID_PASSWORD}
       - SQUID_PORT=${SQUID_PORT:-3128}
     volumes:
       - squid_data:/etc/squid

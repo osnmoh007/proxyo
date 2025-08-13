@@ -32,9 +32,9 @@ A Dockerized version of the Squid proxy server with automatic user management us
 
 ### Using Docker directly
 
-1. Build the image:
+1. Pull from Docker Hub:
    ```bash
-   docker build -t squid-proxy .
+   docker pull YOUR_DOCKERHUB_USERNAME/squid-proxy:latest
    ```
 
 2. Run the container:
@@ -44,13 +44,13 @@ A Dockerized version of the Squid proxy server with automatic user management us
      -p 3128:3128 \
      -e SQUID_USERNAME=your_username \
      -e SQUID_PASSWORD=your_password \
-     squid-proxy
+     YOUR_DOCKERHUB_USERNAME/squid-proxy:latest
    ```
 
 ## Environment Variables
 
-- `SQUID_USERNAME`: Username for proxy authentication (default: proxyuser)
-- `SQUID_PASSWORD`: Password for proxy authentication (default: proxypass)
+- `SQUID_USERNAME`: **Required** - Username for proxy authentication
+- `SQUID_PASSWORD`: **Required** - Password for proxy authentication  
 - `SQUID_PORT`: Port for the proxy server (default: 3128)
 
 ## Usage
