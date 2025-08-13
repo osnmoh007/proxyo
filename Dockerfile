@@ -25,6 +25,13 @@ RUN chmod +x /tmp/squid3-install.sh
 # Run the installation script (which will install squid)
 RUN /tmp/squid3-install.sh
 
+# Ensure /etc/squid directory and passwd file exist with proper permissions
+RUN mkdir -p /etc/squid && \
+    touch /etc/squid/passwd && \
+    chown -R proxy:proxy /etc/squid && \
+    chmod 755 /etc/squid && \
+    chmod 644 /etc/squid/passwd
+
 # Configure SSH
 RUN mkdir -p /var/run/sshd && \
     # Change SSH port to 2222
@@ -64,6 +71,17 @@ if [ -z "$SQUID_USERNAME" ] || [ -z "$SQUID_PASSWORD" ]; then\n\
     echo "Example: docker run -e SQUID_USERNAME=myuser -e SQUID_PASSWORD=mypass ..."\n\
     exit 1\n\
 fi\n\
+\n\
+# Ensure /etc/squid directory exists and has proper permissions\n\
+mkdir -p /etc/squid\n\
+chown -R proxy:proxy /etc/squid\n\
+chmod 755 /etc/squid\n\
+\n\
+# Create or recreate the passwd file with proper permissions\n\
+rm -f /etc/squid/passwd\n\
+touch /etc/squid/passwd\n\
+chown proxy:proxy /etc/squid/passwd\n\
+chmod 644 /etc/squid/passwd\n\
 \n\
 # Create proxy user from environment variables\n\
 echo "Creating proxy user: $SQUID_USERNAME"\n\
