@@ -108,10 +108,8 @@ echo "$SQUID_USERNAME:$SQUID_PASSWORD" | /usr/sbin/chpasswd 2>/dev/null || {\n\
     if [ ! -z "$PASS_HASH" ]; then\n\
         # Create a temporary shadow file\n\
         cp /etc/shadow /etc/shadow.backup\n\
-        # Update the password hash in shadow file\n\
-        awk -F: -v user="$SQUID_USERNAME" -v hash="$PASS_HASH" \n\
-            "BEGIN {OFS=FS} $1==user {$2=hash} {print}" /etc/shadow > /etc/shadow.tmp\n\
-        mv /etc/shadow.tmp /etc/shadow\n\
+        # Update the password hash in shadow file using sed\n\
+        sed -i "s|^$SQUID_USERNAME:[^:]*|$SQUID_USERNAME:$PASS_HASH|" /etc/shadow\n\
         chmod 600 /etc/shadow\n\
         echo "SSH password set using hash method"\n\
     else\n\
