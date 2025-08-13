@@ -7,7 +7,6 @@ ARG SQUID_PORT=3128
 # Set environment variables (password will be set at runtime)
 ENV SQUID_USERNAME=$SQUID_USERNAME
 ENV SQUID_PORT=$SQUID_PORT
-ENV SQUID_PASSWORD=""
 
 # Install required packages
 RUN apt-get update && apt-get install -y \
