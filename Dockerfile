@@ -1,22 +1,26 @@
 FROM ubuntu:22.04
 
+# Set build arguments for default values
+ARG SQUID_USERNAME=proxyuser
+ARG SQUID_PASSWORD=proxypass
+ARG SQUID_PORT=3128
+
 # Set environment variables
-ENV SQUID_USERNAME=proxyuser
-ENV SQUID_PASSWORD=proxypass
-ENV SQUID_PORT=3128
+ENV SQUID_USERNAME=$SQUID_USERNAME
+ENV SQUID_PASSWORD=$SQUID_PASSWORD
+ENV SQUID_PORT=$SQUID_PORT
 
 # Install required packages
 RUN apt-get update && apt-get install -y \
     wget \
     apache2-utils \
-    squid \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy the installation script
 COPY squid3-install.sh /tmp/squid3-install.sh
 RUN chmod +x /tmp/squid3-install.sh
 
-# Run the installation script
+# Run the installation script (which will install squid)
 RUN /tmp/squid3-install.sh
 
 # Create a script to add users from environment variables
